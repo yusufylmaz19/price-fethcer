@@ -59,6 +59,17 @@ try:
     google_urls = []
     amazon_data = []
 
+    # Fiyat bilgisini çekme
+    def get_price(product):
+        # "p" anahtarını kontrol et
+        if "lp" in product and product["lp"]:
+            return product["lp"]
+        # Eğer "p" yoksa "lp" anahtarını kontrol et
+        elif "p" in product and product["p"]:
+            return product["p"]
+        else:
+            return "No data available"
+
     # Amazon sonuçlarını Excel dosyasına yazma
     def save_amazon_names_into_excel(amazon_names):
         print("Excel dosyasına yazılıyor..")
@@ -165,7 +176,8 @@ try:
             print(message)
             write_errors(message)
             return
-        print("Ürünler tranıyor..")
+
+        print("Ürünler taranıyor..")
         for i in range(len(ean_codes)):
             print(f"Product {i + 1}/{len(ean_codes)}")
             ean_code = ean_codes[i]
@@ -173,16 +185,15 @@ try:
                 product_name = product_names[i]
                 params = {
                     "a": "ds",
-                    "p": "1",  # Page number or price
-                    "q": ean_code,  # Product barcode or product name
-                    "c": "",  # could be category id
-                    "s": "2",  # 1: Populer, 2: Price Descending, 4: Price Ascending, 7: Highest Point, 3: Newest
+                    "p": "1",
+                    "q": ean_code,
+                    "c": "",
+                    "s": "2",
                     "t": "6",
-                    "f": "",  # filter id example 140303 = tava
+                    "f": "",
                 }
                 response = requests.get(url, params=params, headers=headers)
                 if response.status_code == 200:
-                    # Parse JSON response
                     data = response.json()
                     # print("Response:", data)
                     if "pl" in data and "products" in data["pl"]:
@@ -190,13 +201,9 @@ try:
                         if len(products) == 1:
                             product = products[0]
                             link = f"https://www.akakce.com/arama/?q={product['n'].replace(' ', '+')}"
-                            name: str = product["n"]
-                            price: str = product["lp"]
-                            if price == "":
-                                price = "No data available"
-                            print(
-                                f"Similarity: 1.0 Name:  {name}, Price: {price}, Link:{link}"
-                            )
+                            name = product["n"]
+                            price = get_price(product)
+                            print(f"Name: {name}, Price: {price}, Link: {link}")
                             table.append([i, ean_code, name, price, link])
                         else:
                             matching_products = []
@@ -208,7 +215,7 @@ try:
                                     matching_products.append((product, similarity))
                                 else:
                                     print(
-                                        f"Similarity: {similarity}, Name:  {product['n']}"
+                                        f"Similarity: {similarity}, Name: {product['n']}"
                                     )
                             matching_products.sort(key=lambda x: x[1], reverse=True)
                             top_matching_products = matching_products[
@@ -217,12 +224,10 @@ try:
                             if top_matching_products:
                                 for product, similarity in top_matching_products:
                                     link = f"https://www.akakce.com/arama/?q={product['n'].replace(' ', '+')}"
-                                    name: str = product["n"]
-                                    price: str = product["lp"]
-                                    if price == "":
-                                        price = "No data available"
+                                    name = product["n"]
+                                    price = get_price(product)
                                     print(
-                                        f"Similarity: {similarity}, Name:  {name}, Price: {price}, Link:{link}"
+                                        f"Similarity: {similarity}, Name: {name}, Price: {price}, Link: {link}"
                                     )
                                     table.append([i, ean_code, name, price, link])
                             else:
@@ -247,7 +252,6 @@ try:
                                 "No data available",
                             ]
                         )
-
                 else:
                     print("Request failed with status code:", response.status_code)
             else:
